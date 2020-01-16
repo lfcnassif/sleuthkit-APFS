@@ -121,7 +121,9 @@ public class SleuthkitJNI {
 		 * @param caseDbPointer 
 		 */
 		private static void createCaseHandleCache(long caseDbPointer) {
-			caseHandlesCache.put(caseDbPointer, new CaseHandles());
+			synchronized (cacheLock) {
+				caseHandlesCache.put(caseDbPointer, new CaseHandles());
+			}
 		}
 		
 		/**
@@ -261,8 +263,10 @@ public class SleuthkitJNI {
 				for (Map<Long, Long> imageToFsMap : getCaseHandles(caseDbPointer).fsHandleCache.values()) {
 					for (Long fsHandle : imageToFsMap.values()) {
 						// First close all open file handles for the file system.
-						for (Long fileHandle : getCaseHandles(caseDbPointer).fileSystemToFileHandles.get(fsHandle)) {
-							closeFile(fileHandle);
+						if (getCaseHandles(caseDbPointer).fileSystemToFileHandles.containsKey(fsHandle)) {
+							for (Long fileHandle : getCaseHandles(caseDbPointer).fileSystemToFileHandles.get(fsHandle)) {
+								closeFile(fileHandle);
+							}
 						}
 						// Then close the file system handle.
 						closeFsNat(fsHandle);
@@ -733,6 +737,10 @@ public class SleuthkitJNI {
 					nonNullCaseDbPointer = HandleCache.getDefaultCaseDbPointer();
 				}
 				
+				if(HandleCache.getCaseHandles(nonNullCaseDbPointer) == null){
+					HandleCache.createCaseHandleCache(nonNullCaseDbPointer);
+				}
+				
 				// If we're getting a fresh copy, remove any existing cache references
 				if (!useCache && HandleCache.getCaseHandles(nonNullCaseDbPointer).imageHandleCache.containsKey(imageKey)) {
 					long tempImageHandle = HandleCache.getCaseHandles(nonNullCaseDbPointer).imageHandleCache.get(imageKey);
@@ -833,7 +841,7 @@ public class SleuthkitJNI {
 					//return cached
 					fsHandle = imgOffSetToFsHandle.get(fsOffset);
 				} else {
-					fsHandle = openFsNat(imgHandle, fsOffset);
+					fsHandle = openFsNat(caseDbPointer, imgHandle, fsOffset);
 					//cache it
 					imgOffSetToFsHandle.put(fsOffset, fsHandle);
 				}
@@ -1659,7 +1667,7 @@ public class SleuthkitJNI {
 
 	private static native long openVolNat(long vsHandle, long volId) throws TskCoreException;
 
-	private static native long openFsNat(long imgHandle, long fsId) throws TskCoreException;
+	private static native long openFsNat(long db, long imgHandle, long fsId) throws TskCoreException;
 
 	private static native long openFileNat(long fsHandle, long fileId, int attrType, int attrId) throws TskCoreException;
 

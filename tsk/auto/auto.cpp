@@ -16,6 +16,7 @@
 #include "tsk_auto_i.h"
 #include "tsk/fs/tsk_fatxxfs.h"
 #include "tsk/img/img_writer.h"
+#include "tsk/fs/apfs_fs.h"
 
 
 // @@@ Follow through some error paths for sanity check and update docs somewhere to reflect the new scheme
@@ -32,6 +33,7 @@ TskAuto::TskAuto()
     m_curVsPartDescr = "";
     m_imageWriterEnabled = false;
     m_imageWriterPath = NULL;
+	password = "";
 }
 
 
@@ -61,6 +63,10 @@ TSK_VS_PART_FLAG_ENUM TskAuto::getCurVsPartFlag() const {
 
 bool TskAuto::isCurVsValid() const {
     return m_curVsPartValid;
+}
+
+void TskAuto::setPassword(const char * pass){
+	password = pass;
 }
 
 /**
@@ -355,32 +361,70 @@ TSK_RETVAL_ENUM
     }
 
     TSK_FS_INFO *fs_info;
-    if ((fs_info = tsk_fs_open_img(m_img_info, a_start, a_ftype)) == NULL) {
-        if (isCurVsValid() == false) {
-            tsk_error_set_errstr2 ("Sector offset: %" PRIuOFF, a_start/512);
-            registerError();
-            return TSK_ERR;
-        }
-        else if (getCurVsPartFlag() & TSK_VS_PART_FLAG_ALLOC) {
-            tsk_error_set_errstr2 (
-                "Sector offset: %" PRIuOFF ", Partition Type: %s",
-                a_start/512, getCurVsPartDescr().c_str()
-            );
-            registerError();
-            return TSK_ERR;
-        }
-        else {
-            tsk_error_reset();
-            return TSK_OK;
-        }
-    }
+	TSK_RETVAL_ENUM retval;
+	const TSK_POOL_INFO *pool = NULL;
 
-    TSK_RETVAL_ENUM retval = findFilesInFsInt(fs_info, fs_info->root_inum);
-    tsk_fs_close(fs_info);
+	pool = tsk_pool_open_img_sing(m_img_info, a_start, TSK_POOL_TYPE_DETECT);
+	if (pool == NULL) {
+		//no apfs code path
+		if ((fs_info = tsk_fs_open_img(m_img_info, a_start, a_ftype)) == NULL) {
+			if (isCurVsValid() == false) {
+				tsk_error_set_errstr2("Sector offset: %" PRIuOFF, a_start / 512);
+				registerError();
+				return TSK_ERR;
+			}
+			else if (getCurVsPartFlag() & TSK_VS_PART_FLAG_ALLOC) {
+				tsk_error_set_errstr2(
+					"Sector offset: %" PRIuOFF ", Partition Type: %s",
+					a_start / 512, getCurVsPartDescr().c_str()
+				);
+				registerError();
+				return TSK_ERR;
+			}
+			else {
+				tsk_error_reset();
+				return TSK_OK;
+			}
+		}
+		else {
+			retval = findFilesInFsInt(fs_info, fs_info->root_inum);
+			tsk_fs_close(fs_info);
+		}
+	}
+	else {
+		TSK_POOL_VOLUME_INFO *tpvi = pool->vol_list;
+		while (tpvi != NULL) {
+
+			TSK_DADDR_T pvol_block = tpvi->block;
+			//tsk_fprintf(stdout, "\nDecoding pvol_block %d\n", pvol_block);
+
+			if ((fs_info = tsk_fs_open_pool_decrypt(pool, pvol_block, a_ftype, password)) == NULL) {
+				tsk_error_print(stderr);
+				if (tsk_error_get_errno() == TSK_ERR_FS_UNSUPTYPE)
+					tsk_fs_type_print(stderr);
+				tsk_fprintf(stderr, "\nInvalid fs in apsb_block %d of pool at %d\n", pvol_block, a_start);
+			}
+			else {
+				TskAuto *tsk = (TskAuto *)this;
+				tsk->addPoolInfo(pvol_block, a_start);
+
+				retval = findFilesInFsInt(fs_info, fs_info->root_inum);
+				tsk_fs_close(fs_info);
+			}
+
+			tpvi = tpvi->next;
+		}
+		pool->close(pool);
+	}
+
     if (m_errors.empty() == false)
         return TSK_ERR;
     else 
         return retval;
+}
+
+void TskAuto::addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset)
+{
 }
 
 

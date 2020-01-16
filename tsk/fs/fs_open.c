@@ -25,6 +25,7 @@
  --*/
 
 #include "tsk_fs_i.h"
+#include "tsk/fs/apfs_fs.h"
 
 /**
  * \file fs_open.c
@@ -101,9 +102,47 @@ tsk_fs_open_vol_decrypt(const TSK_VS_PART_INFO * a_part_info,
  */
 TSK_FS_INFO *
 tsk_fs_open_img(TSK_IMG_INFO * a_img_info, TSK_OFF_T a_offset,
-    TSK_FS_TYPE_ENUM a_ftype)
+	TSK_FS_TYPE_ENUM a_ftype)
 {
-    return tsk_fs_open_img_decrypt(a_img_info, a_offset, a_ftype, "");
+	TSK_FS_INFO *fs_info = tsk_fs_open_img_decrypt(a_img_info, a_offset, a_ftype, "");
+	return fs_info;
+}
+
+TSK_FS_INFO *
+tsk_fs_open_img2(DB_POOL_INFO pool_info , TSK_IMG_INFO * a_img_info, TSK_FS_TYPE_ENUM a_ftype)
+{
+	TSK_FS_INFO *fs_info;
+
+	TSK_POOL_TYPE_ENUM pooltype = TSK_POOL_TYPE_DETECT;
+	const TSK_POOL_INFO *pool = NULL;
+
+	TSK_OFF_T a_offset = pool_info.img_offset;
+
+	//tsk_fprintf(stdout, "\nOpening pool at offset %d\n", a_offset);
+
+	pool = tsk_pool_open_img_sing(a_img_info, a_offset, pooltype);
+	if (pool == NULL) {
+		tsk_error_print(stderr);
+		if (tsk_error_get_errno() == TSK_ERR_FS_UNSUPTYPE)
+			tsk_fs_type_print(stderr);
+		//m_img_info->close(m_img_info);
+		//exit(1);
+		tsk_fprintf(stderr, "\nInvalid pool at %d\n", a_offset);
+		return TSK_COR;
+	}
+
+	if (pool_info.pool_block != 0) {
+		//tsk_fprintf(stdout, "\nDecoding pvol_block %d\n", pool_info.pool_block);
+
+		if ((fs_info = tsk_fs_open_pool_decrypt(pool, pool_info.pool_block, a_ftype, pool_info.password)) == NULL) {
+			tsk_error_print(stderr);
+			if (tsk_error_get_errno() == TSK_ERR_FS_UNSUPTYPE)
+				tsk_fs_type_print(stderr);
+			tsk_fprintf(stderr, "\nInvalid fs in apsb_block %d of pool at offset %d\n", pool_info.pool_block, a_offset);
+		}
+	}
+	
+	return fs_info;
 }
 
 /**

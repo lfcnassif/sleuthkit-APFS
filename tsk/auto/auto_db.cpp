@@ -317,6 +317,14 @@ TskAutoDb::filterVol(const TSK_VS_PART_INFO * vs_part)
     return TSK_FILTER_CONT;
 }
 
+/**
+* @returns 1 on error, 0 on success
+*/
+void
+TskAutoDb::addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset)
+{
+	m_db->addPoolInfo(pool_block, img_offset, this->password);
+}
 
 TSK_FILTER_ENUM
 TskAutoDb::filterFs(TSK_FS_INFO * fs_info)

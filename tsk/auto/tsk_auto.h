@@ -75,6 +75,8 @@ class TskAuto {
     virtual uint8_t openImageHandle(TSK_IMG_INFO *);
     virtual void closeImage();
 
+	virtual void addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset);
+
     TSK_OFF_T getImageSize() const;
     /**
      * Returns true if all processing and recursion should stop. 
@@ -211,6 +213,8 @@ class TskAuto {
      * therefore we can trust the results of getCurVsPartFlag/Desc.
      */
     bool isCurVsValid() const;
+
+	void setPassword(const char *pass);
     
   private:
     TSK_VS_PART_FLAG_ENUM m_volFilterFlags;
@@ -253,6 +257,7 @@ class TskAuto {
 	bool m_imageWriterEnabled;
     TSK_TCHAR * m_imageWriterPath;
 
+	const char *password;
     
     TSK_RETVAL_ENUM processAttributes(TSK_FS_FILE * fs_file,
         const char *path);

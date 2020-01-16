@@ -175,6 +175,7 @@ class TskDb {
     virtual int addVsInfo(const TSK_VS_INFO * vs_info, int64_t parObjId, int64_t & objId) = 0;
     virtual int addVolumeInfo(const TSK_VS_PART_INFO * vs_part, int64_t parObjId, int64_t & objId) = 0;
     virtual int addFsInfo(const TSK_FS_INFO * fs_info, int64_t parObjId, int64_t & objId) = 0;
+	virtual int addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset, const char *password) = 0;
     virtual int addFsFile(TSK_FS_FILE * fs_file, const TSK_FS_ATTR * fs_attr,
         const char *path, const unsigned char *const md5,
         const TSK_DB_FILES_KNOWN_ENUM known, int64_t fsObjId,
@@ -210,6 +211,8 @@ class TskDb {
     virtual TSK_RETVAL_ENUM getObjectInfo(int64_t objId, TSK_DB_OBJECT & objectInfo) = 0;
     virtual TSK_RETVAL_ENUM getParentImageId (const int64_t objId, int64_t & imageId) = 0;
     virtual TSK_RETVAL_ENUM getFsRootDirObjectInfo(const int64_t fsObjId, TSK_DB_OBJECT & rootDirObjInfo) = 0;
+
+	virtual DB_POOL_INFO getPoolInfo(TSK_DADDR_T pool_block) = 0;
 
   protected:
 	

@@ -11,6 +11,7 @@
 
 #include "tsk/tsk_tools_i.h"
 #include "tsk/auto/tsk_case_db.h"
+#include "tsk/fs/apfs_fs.h"
 #include <locale.h>
 
 static TSK_TCHAR *progname;
@@ -29,6 +30,12 @@ usage()
         "\t-i imgtype: The format of the image file (use '-i list' for supported types)\n");
     tsk_fprintf(stderr,
         "\t-b dev_sector_size: The size (in bytes) of the device sectors\n");
+	tsk_fprintf(stderr,
+		"\t-P pooltype: Pool container type (use '-P list' for supported types)\n");
+	tsk_fprintf(stderr,
+		"\t-B pool_volume_block: Starting block (for pool volumes only)\n");
+	tsk_fprintf(stderr, "\t-S snap_id: Snapshot ID (for APFS only)\n");
+	tsk_fprintf(stderr, "\t-K password: Decryption password for encrypted volumes\n");
     tsk_fprintf(stderr, "\t-d database: Path for the database (default is the same directory as the image, with name derived from image name)\n");
     tsk_fprintf(stderr, "\t-v: verbose output to stderr\n");
     tsk_fprintf(stderr, "\t-V: Print version\n");
@@ -54,6 +61,11 @@ main(int argc, char **argv1)
     bool createDbFlag = true; // true if we are going to create a new database
     bool calcHash = false;
 
+	const char *password = "";
+	TSK_POOL_TYPE_ENUM pooltype = TSK_POOL_TYPE_DETECT;
+	TSK_DADDR_T pvol_block = 0;
+	TSK_DADDR_T snap_id = 0;
+
 #ifdef TSK_WIN32
     // On Windows, get the wide arguments (mingw doesn't support wmain)
     argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -68,7 +80,7 @@ main(int argc, char **argv1)
     progname = argv[0];
     setlocale(LC_ALL, "");
 
-    while ((ch = GETOPT(argc, argv, _TSK_T("ab:d:hi:kvVz:"))) > 0) {
+    while ((ch = GETOPT(argc, argv, _TSK_T("ab:d:hi:kvVz:P:B:K:S:"))) > 0) {
         switch (ch) {
         case _TSK_T('?'):
         default:
@@ -104,7 +116,36 @@ main(int argc, char **argv1)
             }
             break;
                 
-        case _TSK_T('k'):
+		case _TSK_T('P'):
+			if (TSTRCMP(OPTARG, _TSK_T("list")) == 0) {
+				tsk_pool_type_print(stderr);
+				exit(1);
+			}
+			pooltype = tsk_pool_type_toid(OPTARG);
+			if (pooltype == TSK_POOL_TYPE_UNSUPP) {
+				TFPRINTF(stderr,
+					_TSK_T("Unsupported pool container type: %s\n"), OPTARG);
+				usage();
+			}
+			break;
+		case _TSK_T('B'):
+			if ((pvol_block = tsk_parse_offset(OPTARG)) == -1) {
+				tsk_error_print(stderr);
+				exit(1);
+			}
+			break;
+		case _TSK_T('S'):
+			if ((snap_id = tsk_parse_offset(OPTARG)) == -1) {
+				tsk_error_print(stderr);
+				exit(1);
+			}
+			break;
+		
+		case _TSK_T('K'):
+			password = argv1[OPTIND - 1];
+			break;
+		
+		case _TSK_T('k'):
             blkMapFlag = false;
             break;
 
@@ -171,7 +212,9 @@ main(int argc, char **argv1)
     TskAutoDb *autoDb = tskCase->initAddImage();
     autoDb->createBlockMap(blkMapFlag);
     autoDb->hashFiles(calcHash);
-    autoDb->setAddUnallocSpace(true);
+	//IPED PATCH
+	autoDb->setAddUnallocSpace(true, 500 * 1024 * 1024);
+	autoDb->setPassword(password);
 
     if (autoDb->startAddImage(argc - OPTIND, &argv[OPTIND], imgtype, ssize)) {
         std::vector<TskAuto::error_record> errors = autoDb->getErrorList();
