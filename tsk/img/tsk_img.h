@@ -75,6 +75,14 @@ extern "C" {
 #define TSK_IMG_INFO_CACHE_NUM  32
 #define TSK_IMG_INFO_CACHE_LEN  65536
 
+	typedef struct DB_POOL_INFO DB_POOL_INFO;
+
+	struct DB_POOL_INFO {
+		TSK_DADDR_T pool_block;
+		TSK_OFF_T img_offset;
+		char password[256];
+	};
+
     typedef struct TSK_IMG_INFO TSK_IMG_INFO;
 #define TSK_IMG_INFO_TAG 0x39204231
 

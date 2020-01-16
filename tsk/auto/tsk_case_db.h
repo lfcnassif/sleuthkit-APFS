@@ -45,6 +45,7 @@ class TskAutoDb:public TskAuto {
 
     virtual TSK_FILTER_ENUM filterVs(const TSK_VS_INFO * vs_info);
     virtual TSK_FILTER_ENUM filterVol(const TSK_VS_PART_INFO * vs_part);
+    virtual void addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset);
     virtual TSK_FILTER_ENUM filterFs(TSK_FS_INFO * fs_info);
     virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE * fs_file,
         const char *path);
@@ -215,6 +216,8 @@ class TskCaseDb {
     uint8_t addImage(int numImg, const TSK_TCHAR * const imagePaths[],
         TSK_IMG_TYPE_ENUM imgType, unsigned int sSize);
     TskAutoDb *initAddImage();
+
+	TskDb *getTskDb();
 
   private:
     // prevent copying until we add proper logic to handle it

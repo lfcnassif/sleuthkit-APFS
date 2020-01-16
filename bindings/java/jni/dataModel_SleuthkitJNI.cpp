@@ -150,6 +150,17 @@ castVsPartInfo(JNIEnv * env, jlong ptr)
     return lcl;
 }
 
+static TSK_IMG_INFO *
+castImgOrPoolInfo(JNIEnv * env, jlong ptr)
+{
+	TSK_IMG_INFO *lcl = (TSK_IMG_INFO *)ptr;
+	if (!lcl || (lcl->tag != TSK_IMG_INFO_TAG && lcl->tag != TSK_POOL_INFO_TAG)) {
+		setThrowTskCoreError(env, "Invalid IMG_INFO/POOL_INFO object");
+		return 0;
+	}
+	return lcl;
+}
+
 static TSK_FS_INFO *
 castFsInfo(JNIEnv * env, jlong ptr)
 {
@@ -159,7 +170,7 @@ castFsInfo(JNIEnv * env, jlong ptr)
         return 0;
     }
     // verify that image handle is still open
-    if (!castImgInfo(env, (jlong) lcl->img_info)) {
+    if (!castImgOrPoolInfo(env, (jlong) lcl->img_info)) {
         return 0;
     }
     return lcl;
@@ -1412,6 +1423,9 @@ Java_org_sleuthkit_datamodel_SleuthkitJNI_openVolNat(JNIEnv * env,
     return (jlong) vol_part_info;
 }
 
+//lock used for opening apfs files from multiple threads
+static tsk_lock_t * apfs_read_lock = (tsk_lock_t *)tsk_malloc(sizeof(tsk_lock_t));
+static bool lockInited = false;
 
 /*
  * Open file system with the given offset
@@ -1422,17 +1436,38 @@ Java_org_sleuthkit_datamodel_SleuthkitJNI_openVolNat(JNIEnv * env,
  * @param fs_offset the offset in bytes to the file system 
  */
 JNIEXPORT jlong JNICALL Java_org_sleuthkit_datamodel_SleuthkitJNI_openFsNat
-    (JNIEnv * env, jclass obj, jlong a_img_info, jlong fs_offset) {
+    (JNIEnv * env, jclass obj, jlong caseHandle, jlong a_img_info, jlong fs_offset) {
     TSK_IMG_INFO *img_info = castImgInfo(env, a_img_info);
     if (img_info == 0) {
         //exception already set
         return 0;
     }
-    TSK_FS_INFO *fs_info;
 
-    fs_info =
-        tsk_fs_open_img(img_info, (TSK_OFF_T) fs_offset,
-        TSK_FS_TYPE_DETECT);
+	TskCaseDb *tskCase = castCaseDb(env, caseHandle);
+	if (tskCase == 0) {
+		//exception already set
+		return 0;
+	}
+
+	//cast ok?
+	TSK_DADDR_T pool_block = (TSK_DADDR_T)fs_offset;
+	DB_POOL_INFO pool_info = tskCase->getTskDb()->getPoolInfo(pool_block);
+	TSK_FS_INFO *fs_info;
+
+	if (pool_info.pool_block == 0) {
+		//tsk_fprintf(stdout, "\ngetPoolInfo() returned no result for block %d\n", pool_info.pool_block);
+		fs_info = tsk_fs_open_img(img_info, (TSK_OFF_T)fs_offset, TSK_FS_TYPE_DETECT);
+	}
+	else {
+		fs_info = tsk_fs_open_img2(pool_info, img_info, TSK_FS_TYPE_DETECT);
+		
+		//init apfs lock
+		if (!lockInited) {
+			tsk_init_lock(apfs_read_lock);
+			lockInited = true;
+		}
+	}
+
     if (fs_info == NULL) {
         setThrowTskCoreError(env, tsk_error_get());
     }
@@ -1460,18 +1495,31 @@ Java_org_sleuthkit_datamodel_SleuthkitJNI_openFileNat(JNIEnv * env,
         return 0;
     }
 
-    
+	bool apfs_locked = false;
+	if (fs_info->pool_info->tag == TSK_POOL_INFO_TAG) {
+		tsk_take_lock(apfs_read_lock);
+		apfs_locked = true;
+	}
+
     TSK_FS_FILE *file_info;
     //open file
     file_info = tsk_fs_file_open_meta(fs_info, NULL, (TSK_INUM_T) file_id);
     if (file_info == NULL) {
         setThrowTskCoreError(env, tsk_error_get());
+		if (apfs_locked) {
+			tsk_release_lock(apfs_read_lock);
+		}
         return 0;
     }
-
+	
     //open attribute
-    const TSK_FS_ATTR * tsk_fs_attr = 
-        tsk_fs_file_attr_get_type(file_info, (TSK_FS_ATTR_TYPE_ENUM)attr_type, (uint16_t)attr_id, 1);
+	const TSK_FS_ATTR * tsk_fs_attr =
+		tsk_fs_file_attr_get_type(file_info, (TSK_FS_ATTR_TYPE_ENUM)attr_type, (uint16_t)attr_id, 1);
+
+	if (apfs_locked) {
+		tsk_release_lock(apfs_read_lock);
+	}
+
     if (tsk_fs_attr == NULL) {
         tsk_fs_file_close(file_info);
         setThrowTskCoreError(env, tsk_error_get());

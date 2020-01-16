@@ -301,7 +301,13 @@ public class TskData {
 		TSK_FS_ATTR_TYPE_HFS_DATA(0x1100), // 4352 Data fork of regular files
 		TSK_FS_ATTR_TYPE_HFS_RSRC(0x1101), // 4353 Resource fork of regular files
 		TSK_FS_ATTR_TYPE_HFS_EXT_ATTR(0x1102), // 4354 Extended Attributes) except compression records
-		TSK_FS_ATTR_TYPE_HFS_COMP_REC(0x1103); // 4355 Compression records
+		TSK_FS_ATTR_TYPE_HFS_COMP_REC(0x1103), // 4355 Compression records
+	    
+	    // Types for APFS File Attributes (alias to HFS+)
+	    TSK_FS_ATTR_TYPE_APFS_DATA(0x1100),
+	    TSK_FS_ATTR_TYPE_APFS_RSRC(0x1101),
+	    TSK_FS_ATTR_TYPE_APFS_EXT_ATTR(0x1102),
+	    TSK_FS_ATTR_TYPE_APFS_COMP_REC(0x1103);
 
 		private int val;
 
@@ -455,11 +461,14 @@ public class TskData {
 		TSK_FS_TYPE_RAW_DETECT(0x00000400, bundle.getString("TskData.tskFsTypeEnum.RAWautoDetect")), ///< RAW auto detection
 		TSK_FS_TYPE_ISO9660(0x00000800, "ISO9660"), ///< ISO9660 file system
 		TSK_FS_TYPE_ISO9660_DETECT(0x00000800, bundle.getString("TskData.tskFsTypeEnum.ISO9660autoDetect")), ///< ISO9660 auto detection
-		TSK_FS_TYPE_HFS(0x00001000, "HFS"), ///< HFS file system
-		TSK_FS_TYPE_HFS_DETECT(0x00001000, bundle.getString("TskData.tskFsTypeEnum.HFSautoDetect")), ///< HFS auto detection
+		TSK_FS_TYPE_HFS(0x00001000, "HFS"), ///< HFS+/HFSX file system
+		TSK_FS_TYPE_HFS_DETECT(0x00009000, bundle.getString("TskData.tskFsTypeEnum.HFSautoDetect")), ///< HFS auto detection
 		TSK_FS_TYPE_EXT4(0x00002000, "Ext4"), ///< Ext4 file system
 		TSK_FS_TYPE_YAFFS2(0x00004000, "YAFFS2"), ///< YAFFS2 file system
 		TSK_FS_TYPE_YAFFS2_DETECT(0x00004000, bundle.getString("TskData.tskFsTypeEnum.YAFFS2autoDetect")), ///< YAFFS2 auto detection
+		TSK_FS_TYPE_HFS_LEGACY(0x00008000, "HFS (legacy)"),   ///< HFS file system
+		TSK_FS_TYPE_APFS(0x00010000, "APFS"), ///< APFS file system
+        TSK_FS_TYPE_APFS_DETECT(0x00010000, "APFS (Auto Detection)"), ///< APFS auto detection
 		TSK_FS_TYPE_UNSUPP(0xffffffff, bundle.getString("TskData.tskFsTypeEnum.unsupported"));        ///< Unsupported file system
 
 		private int value;

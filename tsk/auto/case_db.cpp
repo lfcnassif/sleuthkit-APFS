@@ -44,6 +44,11 @@ TskCaseDb::~TskCaseDb()
     m_tag = 0;
 }
 
+TskDb *
+TskCaseDb::getTskDb() {
+	return m_db;
+}
+
 /**
 * Creates a new single-user case with a new database and initializes its tables.
 * Fails if there's already a file at the given path.

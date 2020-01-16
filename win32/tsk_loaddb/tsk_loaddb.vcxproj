@@ -337,7 +337,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>libvhdi.lib;libvmdk.lib;libewf.lib;zlib.lib;libcrypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OPENSSL_HOME)\lib;$(LIBVMDK_HOME)\msvscpp\x64\release;$(LIBVHDI_HOME)\msvscpp\x64\release;$(LIBEWF_HOME)\msvscpp\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OPENSSL_HOME_x64)\lib;$(LIBVMDK_HOME)\msvscpp\x64\release;$(LIBVHDI_HOME)\msvscpp\x64\release;$(LIBEWF_HOME)\msvscpp\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

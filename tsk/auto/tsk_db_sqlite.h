@@ -53,6 +53,7 @@ class TskDbSqlite : public TskDb {
         int64_t & objId);
     int addFsInfo(const TSK_FS_INFO * fs_info, int64_t parObjId,
         int64_t & objId);
+	int addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset, const char * password);
     int addFsFile(TSK_FS_FILE * fs_file, const TSK_FS_ATTR * fs_attr,
         const char *path, const unsigned char *const md5,
         const TSK_DB_FILES_KNOWN_ENUM known, int64_t fsObjId,
@@ -87,6 +88,7 @@ class TskDbSqlite : public TskDb {
     TSK_RETVAL_ENUM getParentImageId (const int64_t objId, int64_t & imageId);
     TSK_RETVAL_ENUM getFsRootDirObjectInfo(const int64_t fsObjId, TSK_DB_OBJECT & rootDirObjInfo);
 
+	DB_POOL_INFO getPoolInfo(TSK_DADDR_T pool_block);
 
   private:
     // prevent copying until we add proper logic to handle it

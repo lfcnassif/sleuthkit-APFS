@@ -1030,6 +1030,7 @@ extern "C" {
     /* File system level */
     extern TSK_FS_INFO *tsk_fs_open_img(TSK_IMG_INFO *, TSK_OFF_T,
         TSK_FS_TYPE_ENUM);
+	extern TSK_FS_INFO *tsk_fs_open_img2(DB_POOL_INFO pool_info, TSK_IMG_INFO * a_img_info, TSK_FS_TYPE_ENUM a_ftype);
     extern TSK_FS_INFO *tsk_fs_open_vol(const TSK_VS_PART_INFO *,
         TSK_FS_TYPE_ENUM);
     extern TSK_FS_INFO *tsk_fs_open_pool(const TSK_POOL_INFO *,
