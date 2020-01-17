@@ -62,6 +62,8 @@ class TskDbPostgreSQL : public TskDb {
         const char *path, const unsigned char *const md5,
         const TSK_DB_FILES_KNOWN_ENUM known, int64_t fsObjId,
         int64_t & objId, int64_t dataSourceObjId);
+    //iped-patch
+    int addPoolInfo(TSK_DADDR_T pool_block, TSK_OFF_T img_offset, const char *password) {};
 
     TSK_RETVAL_ENUM addVirtualDir(const int64_t fsObjId, const int64_t parentDirId, const char * const name, int64_t & objId, int64_t dataSourceObjId);
     TSK_RETVAL_ENUM addUnallocFsBlockFilesParent(const int64_t fsObjId, int64_t & objId, int64_t dataSourceObjId);
@@ -91,6 +93,9 @@ class TskDbPostgreSQL : public TskDb {
     TSK_RETVAL_ENUM getObjectInfo(int64_t objId, TSK_DB_OBJECT & objectInfo);
     TSK_RETVAL_ENUM getParentImageId (const int64_t objId, int64_t & imageId);
     TSK_RETVAL_ENUM getFsRootDirObjectInfo(const int64_t fsObjId, TSK_DB_OBJECT & rootDirObjInfo);
+    
+    //iped-patch
+    DB_POOL_INFO getPoolInfo(TSK_DADDR_T pool_block) {};
 
 private:
 
