@@ -220,6 +220,17 @@ castCaseDb(JNIEnv * env, jlong ptr)
     return lcl;
 }
 
+static TskCaseDb * 
+castCaseDbNoException(JNIEnv * env, jlong ptr)
+{
+    TskCaseDb *lcl = ((TskCaseDb *) ptr);
+    if (lcl == NULL || lcl->m_tag != TSK_CASE_DB_TAG) {
+        return 0;
+    }
+
+    return lcl;
+}
+
 /**
  * Convert a jstring (UTF-8) to a TCHAR to pass into TSK methods.
  * @param buffer Buffer to store resulting string into
@@ -1436,36 +1447,36 @@ static bool lockInited = false;
  * @param fs_offset the offset in bytes to the file system 
  */
 JNIEXPORT jlong JNICALL Java_org_sleuthkit_datamodel_SleuthkitJNI_openFsNat
-    (JNIEnv * env, jclass obj, jlong caseHandle, jlong a_img_info, jlong fs_offset) {
+    (JNIEnv * env, jclass obj, jlong a_img_info, jlong fs_offset, jlong caseHandle) {
     TSK_IMG_INFO *img_info = castImgInfo(env, a_img_info);
     if (img_info == 0) {
         //exception already set
         return 0;
     }
+    
+    TSK_FS_INFO *fs_info = NULL;
 
-	TskCaseDb *tskCase = castCaseDb(env, caseHandle);
-	if (tskCase == 0) {
-		//exception already set
-		return 0;
-	}
-
-	//cast ok?
-	TSK_DADDR_T pool_block = (TSK_DADDR_T)fs_offset;
-	DB_POOL_INFO pool_info = tskCase->getTskDb()->getPoolInfo(pool_block);
-	TSK_FS_INFO *fs_info;
-
-	if (pool_info.pool_block == 0) {
-		//tsk_fprintf(stdout, "\ngetPoolInfo() returned no result for block %d\n", pool_info.pool_block);
-		fs_info = tsk_fs_open_img(img_info, (TSK_OFF_T)fs_offset, TSK_FS_TYPE_DETECT);
-	}
-	else {
-		fs_info = tsk_fs_open_img2(pool_info, img_info, TSK_FS_TYPE_DETECT);
+	TskCaseDb *tskCase = castCaseDbNoException(env, caseHandle);
+	if (tskCase != 0) {
+		//cast ok?
+		TSK_DADDR_T pool_block = (TSK_DADDR_T)fs_offset;
+		DB_POOL_INFO pool_info = tskCase->getTskDb()->getPoolInfo(pool_block);
 		
-		//init apfs lock
-		if (!lockInited) {
-			tsk_init_lock(apfs_read_lock);
-			lockInited = true;
+		if (pool_info.pool_block != 0) {
+			fs_info = tsk_fs_open_img2(pool_info, img_info, TSK_FS_TYPE_DETECT);
+			
+			//init apfs lock
+			if (!lockInited) {
+				tsk_init_lock(apfs_read_lock);
+				lockInited = true;
+			}
 		}
+		
+	}
+	
+	if (fs_info == NULL) {
+		//fallback
+		fs_info = tsk_fs_open_img(img_info, (TSK_OFF_T) fs_offset, TSK_FS_TYPE_DETECT);
 	}
 
     if (fs_info == NULL) {
